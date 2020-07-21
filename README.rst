@@ -18,7 +18,7 @@ Examples
 
     In [1]: %load_ext flux
 
-    In [2]: %%flux http://localhost:9999
+    In [2]: %%flux http://localhost:9999 --token my-token --org my-org
        ...: from(bucket: "apm_metricset")
        ...:   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
        ...:   |> filter(fn: (r) => r["_measurement"] == "apm_metricset")
@@ -88,14 +88,17 @@ Options
 ``-l`` / ``--connections``
     List all active connections
 
+``-t`` / ``--token``
+    InfluxDB token
+
+``-o`` / ``--org``
+    InfluxDB org
+
 ``-x`` / ``--close <session-name>`` 
     Close named connection 
 
 ``-p`` / ``--persist``
     Create a measurement in the database from the named DataFrame
-
-``-a`` / ``--connection_arguments <"{connection arguments}">``
-    Specify dictionary of connection arguments to pass to InfluxDB driver
 
 ``-f`` / ``--file <path>``
     Run Flux from file at this path
