@@ -6,8 +6,8 @@ jobs:
       - checkout
       - python/load-cache
       - python/install-deps
-      - python/install-deps
-          dependency-file: requirements-dev.txt
+      - python/install-deps:
+          dependency-file: "requirements-dev.txt"
       - python/save-cache
       - run:
           command: |
