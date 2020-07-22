@@ -3,6 +3,7 @@ jobs:
   build:
     executor: python/default
     docker:
+      - image: cimg/python:3.8
       - image: quay.io/influxdb/influxdb:2.0.0-beta
     steps:
       - checkout
