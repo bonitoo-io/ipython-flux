@@ -2,6 +2,8 @@ version: 2.1
 jobs:
   build:
     executor: python/default
+    docker:
+      - image: quay.io/influxdb/influxdb:2.0.0-beta
     steps:
       - checkout
       - python/load-cache
@@ -13,8 +15,6 @@ jobs:
           command: |
             pip install .
           name: pip install .
-      - docker:
-        - image: quay.io/influxdb/influxdb:2.0.0-beta
       - run:
           command: |
             # InfluxDB onboarding
