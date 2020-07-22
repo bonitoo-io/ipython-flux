@@ -13,6 +13,13 @@ jobs:
           command: |
             pip install .
           name: pip install .
+      - docker:
+        - image: quay.io/influxdb/influxdb:2.0.0-beta
+      - run:
+          command: |
+            # InfluxDB onboarding
+            wget -S --spider --tries=20 --retry-connrefused --waitretry=5 http://localhost:9999/metrics
+            curl -i -X POST http://localhost:9999/api/v2/setup -H 'accept: application/json' -d '{"username": "my-user","password": "my-password","org": "my-org","bucket": "my-bucket","token": "my-token"}'
       - run:
           command: |
             # pytest would be a dep in requirements.txt
