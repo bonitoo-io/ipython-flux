@@ -6,6 +6,8 @@ jobs:
       - checkout
       - python/load-cache
       - python/install-deps
+      - python/install-deps
+          dependency-file: requirements-dev.txt
       - python/save-cache
       - run:
           command: |
@@ -13,7 +15,7 @@ jobs:
             pytest
           name: Test
 orbs:
-  python: circleci/python@0.1
+  python: circleci/python@0.3.2
 
 workflows:
   main:
