@@ -1,6 +1,8 @@
 ============
 ipython-flux
 ============
+.. image:: https://circleci.com/gh/bonitoo-io/ipython-flux.svg?style=svg
+    :target: https://circleci.com/gh/bonitoo-io/ipython-flux
 
 :Author: Robert Hajek, Bonitoo.io
 
