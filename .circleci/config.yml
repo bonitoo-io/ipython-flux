@@ -11,6 +11,10 @@ jobs:
       - python/save-cache
       - run:
           command: |
+            pip install .
+          name: pip install .
+      - run:
+          command: |
             # pytest would be a dep in requirements.txt
             pytest
           name: Test
