@@ -1,7 +1,3 @@
-import json
-import re
-from string import Formatter
-
 from IPython.core.magic import (
     Magics,
     cell_magic,
@@ -10,10 +6,10 @@ from IPython.core.magic import (
     needs_local_scope,
 )
 from IPython.core.magic_arguments import argument, magic_arguments, parse_argstring
+from influxdb_client.client.write_api import SYNCHRONOUS
 
-import flux.connection
 import flux.parse
-import flux.run
+from flux.connection import Connection
 
 try:
     from traitlets.config.configurable import Configurable
@@ -30,7 +26,7 @@ except ImportError:
 
 @magics_class
 class FluxMagic(Magics, Configurable):
-    """Runs Flux statement on a InfluxDB, specified by SQLAlchemy connect string.
+    """Runs Flux statement on a InfluxDB
 
     %%flux http://localhost:9999
     from(bucket: "my-bucket") |> range(start: -1h)
@@ -66,12 +62,6 @@ class FluxMagic(Magics, Configurable):
     )
     @argument("-x", "--close", type=str, help="close a session by name")
     @argument(
-        "-p",
-        "--persist",
-        action="store_true",
-        help="create a measurement in the bucket from the named DataFrame",
-    )
-    @argument(
         "-t",
         "--token",
         help="influxdb token",
@@ -82,41 +72,46 @@ class FluxMagic(Magics, Configurable):
         help="influxdb org",
     )
     @argument(
-        "--append",
-        action="store_true",
-        help="create, or append to, a table name in the database from the named DataFrame",
-    )
-    @argument(
         "-a",
         "--connection_arguments",
         type=str,
         help="specify dictionary of connection arguments to pass to SQL driver",
     )
     @argument("-f", "--file", type=str, help="Run SQL from file at this path")
+    @argument(
+        "-p",
+        "--persist",
+        help="create a measurement in the bucket from the named DataFrame",
+    )
+    @argument(
+        "-m",
+        "--measurement",
+        help="persist dataframe new measurement name",
+    )
+    @argument(
+        "-T",
+        "--tags",
+        help="persist dataframe list of columns stored as tags",
+    )
+    @argument(
+        "-n",
+        "--bucket",
+        help="persist dataframe target bucket",
+    )
+    @argument(
+        "--debug",
+        action="store_true",
+        help="enable verbose mode for InfluxDB client library",
+    )
+
     def execute(self, line="", cell="", local_ns={}):
         """Runs Flux statement against a database, specified by connect string.
 
-        If no database connection has been established, first word
-        should be a SQLAlchemy connection string, or the user@db name
-        of an established connection.
-
         Examples::
           %%flux http://localhost:9999
-          from(bucket: "my-bucket") |> range(start: -1h)
+        from(bucket: "my-bucket") |> range(start: -1h)
 
         """
-        # Parse variables (words wrapped in {}) for %%flux magic (for %flux this is done automatically)
-        cell_variables = [
-            fn for _, fn, _, _ in Formatter().parse(cell) if fn is not None
-        ]
-        cell_params = {}
-        for variable in cell_variables:
-            if variable in local_ns:
-                cell_params[variable] = local_ns[variable]
-            else:
-                raise NameError(variable)
-        cell = cell.format(**cell_params)
-
         args = parse_argstring(self.execute, line)
         if args.connections:
             return flux.connection.Connection.connections
@@ -135,29 +130,13 @@ class FluxMagic(Magics, Configurable):
 
         parsed = flux.parse.parse(command_text, self)
 
-        if args.connection_arguments:
-            try:
-                # check for string deliniators, we need to strip them for json parse
-                raw_args = args.connection_arguments
-                if len(raw_args) > 1:
-                    targets = ['"', "'"]
-                    head = raw_args[0]
-                    tail = raw_args[-1]
-                    if head in targets and head == tail:
-                        raw_args = raw_args[1:-1]
-                args.connection_arguments = json.loads(raw_args)
-            except Exception as e:
-                print(e)
-                raise e
-        else:
-            args.connection_arguments = {}
-
         try:
             conn = flux.connection.Connection.set(
-                url=parsed["connection"],
+                conn=parsed["connection"],
                 token=args.token,
                 org=args.org,
                 displaycon=self.displaycon,
+                debug=args.debug,
             )
         except Exception as e:
             print(e)
@@ -165,16 +144,15 @@ class FluxMagic(Magics, Configurable):
             return None
 
         if args.persist:
-            return self._persist_dataframe(parsed["flux"], conn, user_ns, append=False)
-
-        if args.append:
-            return self._persist_dataframe(parsed["flux"], conn, user_ns, append=True)
+            return self._persist_dataframe(conn, data_frame=args.persist, measurement=args.measurement,
+                                           bucket=args.bucket,
+                                           tags=args.tags, user_ns=user_ns)
 
         if not parsed["flux"]:
             return
 
         try:
-            result = flux.run.run_flux(conn, parsed["flux"], self, user_ns)
+            result = self.run_flux(conn, parsed["flux"], self)
             if (
                     result is not None
                     and not isinstance(result, str)
@@ -212,43 +190,54 @@ class FluxMagic(Magics, Configurable):
             else:
                 raise
 
-    legal_sql_identifier = re.compile(r"^[A-Za-z0-9#_$]+")
-
-    def _persist_dataframe(self, raw, conn: flux.connection.Connection, user_ns, append=False):
-
-        if not DataFrame:
-            raise ImportError("Must `pip install pandas` to use DataFrames")
-
-        frame_name = raw.strip(";")
+    @staticmethod
+    def _persist_dataframe(conn: Connection, data_frame: str, measurement: str, tags: str, bucket: str, user_ns):
+        tag_columns = None
+        if tags is not None:
+            tag_columns = tags.split(",")
 
         # Get the DataFrame from the user namespace
-        if not frame_name:
-            raise SyntaxError("Syntax: %flux --persist <name_of_data_frame>")
+        persist_error = "Syntax: %flux --persist <data_frame_variable> --bucket <bucket_name> --measurement <measurement_name> --tags <tag_column1,tag_column2>"
+
+        if not bucket:
+            raise SyntaxError("--bucket parameter is required")
+
+        if not data_frame:
+            raise SyntaxError(persist_error)
         try:
-            frame = eval(frame_name, user_ns)
+            frame = eval(data_frame, user_ns)
         except SyntaxError:
-            raise SyntaxError("Syntax: %flux --persist <name_of_data_frame>")
+            raise SyntaxError(
+                persist_error)
         if not isinstance(frame, DataFrame) and not isinstance(frame, Series):
-            raise TypeError("%s is not a Pandas DataFrame or Series" % frame_name)
+            raise TypeError("%s is not a Pandas DataFrame or Series" % data_frame)
 
         # Make a suitable name for the resulting database table
-        measurement_name = frame_name.lower()
-        measurement_name = self.legal_sql_identifier.search(measurement_name).group(0)
+        if measurement is None:
+            measurement = data_frame.lower()
 
-        if_exists = "append" if append else "fail"
+        write_api = conn.session.write_api(write_options=SYNCHRONOUS)
 
-        write_api = conn.session.write_api()
-        write_api.write(bucket="my-bucket", record=frame)
+        write_api.write(bucket=bucket, record=frame,
+                        data_frame_measurement_name=measurement,
+                        data_frame_tag_columns=tag_columns)
 
-        return "Persisted %s" % measurement_name
+        write_api.__del__()
+
+        return "Persisted %s" % data_frame
+
+    @staticmethod
+    def run_flux(conn: Connection, flux: str, config):
+        if flux.strip():
+            result = conn.session.query_api().query_data_frame(query=flux)
+            if result.empty and config.feedback:
+                print(result.rowcount)
+
+            return result
+        else:
+            return "Connected: %s" % conn.name
 
 
 def load_ipython_extension(ip):
     """Load the extension in IPython."""
-
-    # this fails in both Firefox and Chrome for OS X.
-    # I get the error: TypeError: IPython.CodeCell.config_defaults is undefined
-
-    # js = "IPython.CodeCell.config_defaults.highlight_modes['magic_sql'] = {'reg':[/^%%flux/]};"
-    # display_javascript(js, raw=True)
     ip.register_magics(FluxMagic)

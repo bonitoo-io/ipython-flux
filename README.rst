@@ -7,6 +7,7 @@ ipython-flux
 :Author: Robert Hajek, Bonitoo.io
 
 Introduces a %flux (or %%flux) magic.
+
 Connect to a InfluxDB and run Flux commands within IPython or IPython Notebook.
 
 .. image:: https://raw.github.com/bonitoo-io/ipython-flux/master/examples/example.png
@@ -39,21 +40,20 @@ After the first connection, connect info can be omitted::
     Out[8]: ...
 
 
-If no connect string is supplied, ``%flux`` will provide a list of existing connections;
-however, if no connections have yet been made and the environment variable ``INFLUXDB_V2_URL``
-is available, that will be used.
+If no connect string is supplied, ``%flux`` will use environment variables ``INFLUXDB_V2_URL``,
+``INFLUXDB_V2_ORG``, ``INFLUXDB_V2_TOKEN`` to create connection into InfluxDB.
 
 
 Assignment
 ----------
 
-Ordinary IPython assignment works for single-line `%flux` queries:
+Ordinary IPython assignment works for single-line ``%flux`` queries:
 
 .. code-block:: python
 
     In [12]: result = %flux from(bucket: "apm_metricset")  |> range(start: 0)
 
-The `<<` operator captures query results in a local variable, and
+The ``<<`` operator captures query results in a local variable, and
 can be used in multi-line ``%%flux``:
 
 .. code-block:: python
@@ -71,16 +71,12 @@ result is automatically converted into pandas dataframe
 
     In [3]: result =  %flux from(bucket: "apm_metricset")  |> range(start: 0)
 
-The ``--persist`` argument, with the name of a 
-DataFrame object in memory, 
-will create a measurement
+The ``--persist`` argument, with the name of a DataFrame object in memory will create a measurement
 in the database from the named DataFrame.  
 
 .. code-block:: python
 
-    In [5]: %flux --persist dataframe
-
-    In [6]: %flux from(bucket: "apm_metricset")  | filter(fn: (r) => r["_measurement"] == "dataframe" |> range(start: 0)
+    In [1]: %flux --persist <data_frame_variable_name> --bucket my-bucket --measurement <new measurement name> --tags tag_column1,tag_column2
 
 .. _Pandas: http://pandas.pydata.org/
 
@@ -93,17 +89,30 @@ Options
 ``-t`` / ``--token``
     InfluxDB token
 
+
 ``-o`` / ``--org``
     InfluxDB org
+
+``-f`` / ``--file <path>``
+    Run Flux from file at this path
 
 ``-x`` / ``--close <session-name>`` 
     Close named connection 
 
+Persist options
+---------------
+
 ``-p`` / ``--persist``
     Create a measurement in the database from the named DataFrame
 
-``-f`` / ``--file <path>``
-    Run Flux from file at this path
+``-b`` / ``--bucket``
+    target bucket name
+
+``-T`` / ``--tags``
+    comma separated list of columns that will be stored as tags, rest of columns will be stored as fields
+
+``-m`` / ``--measurement``
+    optional, target measurement name, if not specified measurement is taken from dataframe name
 
 Installing
 ----------
@@ -116,6 +125,12 @@ or download from https://github.com/bonitoo-io/ipython-flux and::
 
     cd ipython-flux
     sudo python setup.py install
+
+Enable IPython flux magic extension in Jupyter notebook using
+
+.. code-block:: python
+
+    In [1]: %load_ext flux
 
 Development
 -----------

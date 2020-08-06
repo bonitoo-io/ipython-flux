@@ -2,11 +2,6 @@ import os
 
 from influxdb_client import InfluxDBClient
 
-
-class ConnectionError(Exception):
-    pass
-
-
 def rough_dict_get(dct, sought, default=None):
     """
     Like dct.get(sought), but any key containing sought will do.
@@ -28,64 +23,51 @@ class Connection(object):
 
     @classmethod
     def tell_format(cls):
-        return """Connection info needed in format, example:
-               http://localhost:9999/ --token my-token --org my-org
-               or an existing connection: %s""" % str(
-            cls.connections.keys()
-        )
+        return """Connection info needed in format, 
+        example: %flux http://localhost:9999/ --token my-token --org my-org"""
 
-    def __init__(self, connect_str=None, token=None, org=None):
-        self.name = "%s@%s" % (connect_str or "", org)
+    def __init__(self, url=None, token=None, org=None, debug=False):
 
-        if token is None:
+        if not url:
+            url = os.getenv('INFLUXDB_V2_URL')
+        if url is None:
+            raise Exception("Environment variable $INFLUXDB_V2_URK not set, and no url given.")
+
+        if not token:
             token = os.getenv('INFLUXDB_V2_TOKEN')
+        if not token:
+            raise Exception("Environment variable $INFLUXDB_V2_TOKEN not set, and no token given.")
 
-        if token is None:
-            raise ConnectionError(
-                "Environment variable $INFLUXDB_V2_TOKEN not set, and no token given."
-            )
-
+        if not org:
+            org = os.getenv('INFLUXDB_V2_ORG')
         if org is None:
-            token = os.getenv('INFLUXDB_V2_ORG')
+            raise Exception("Environment variable $INFLUXDB_V2_ORG not set, and no org given.")
 
-        if org is None:
-            raise ConnectionError(
-                "Environment variable $INFLUXDB_V2_ORG not set, and no org given."
-            )
-
-        if connect_str:
-            self.session = InfluxDBClient(url=connect_str, token=token, org=org)
-        else:
-            self.session = InfluxDBClient.from_env_properties()
+        self.name = "%s@%s" % (url or "", org)
+        self.session = InfluxDBClient(url=url, token=token, org=org, debug=debug)
 
         self.session.health()
-        self.connections[repr(connect_str)] = self
+        self.connections[repr(url)] = self
         Connection.current = self
 
     @classmethod
-    def set(cls, url, token, org, displaycon):
+    def set(cls, conn, token, org, displaycon, debug):
         "Sets the current database connection"
-
-        if url:
-            if isinstance(url, Connection):
-                cls.current = url
+        if conn:
+            if isinstance(conn, Connection):
+                cls.current = conn
             else:
-                existing = rough_dict_get(cls.connections, url)
+                existing = rough_dict_get(cls.connections, conn)
 
-            cls.current = existing or Connection(url, token, org)
+            cls.current = existing or Connection(conn, token, org)
+
         else:
             if cls.connections:
                 if displaycon:
                     print(cls.connection_list())
             else:
-                if os.getenv("INFLUXDB_V2_URL"):
-                    cls.current = Connection(
-                        os.getenv("INFLUXDB_V2_URL"),os.getenv("INFLUXDB_V2_TOKEN"),os.getenv("")
-                    )
-                else:
-                    raise ConnectionError(
-                        "Environment variable $INFLUXDB_V2_URL not set, and no connect string given."
-                    )
+                cls.current = Connection(conn, token, org, debug)
+
         return cls.current
 
     @classmethod

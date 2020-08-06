@@ -8,10 +8,9 @@ README = open(os.path.join(here, "README.rst"), encoding="utf-8").read()
 NEWS = open(os.path.join(here, "NEWS.rst"), encoding="utf-8").read()
 
 
-version = "0.0.1"
+version = "0.0.2"
 
 install_requires = [
-    "prettytable<1",
     "ipython>=1.0",
     "influxdb-client",
     "six",
