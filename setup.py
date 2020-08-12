@@ -33,7 +33,7 @@ setup(
         "Programming Language :: Python :: 2",
     ],
     keywords="ipython magic influxdb",
-    author="Catherine Devlin",
+    author="Robert Hajek",
     author_email="robert.hajek@gmail.com",
     url="https://pypi.python.org/pypi/ipython-flux",
     license="MIT",
