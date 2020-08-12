@@ -1,6 +1,13 @@
 News
 ----
 
+0.0.3
+~~~~~
+
+*Release date: 12-08-2020*
+
+* Updated tox.ini and requirement dependencies
+
 0.0.2
 ~~~~~
 
