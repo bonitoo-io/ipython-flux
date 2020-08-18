@@ -21,7 +21,7 @@ Examples
 
     In [1]: %load_ext flux
 
-    In [2]: %%flux http://localhost:9999 --token my-token --org my-org
+    In [2]: %%flux http://localhost:9999 --token "my-token" --org my-org
        ...: from(bucket: "apm_metricset")
        ...:   |> range(start: v.timeRangeStart, stop: v.timeRangeStop)
        ...:   |> filter(fn: (r) => r["_measurement"] == "apm_metricset")
