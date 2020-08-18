@@ -1,6 +1,14 @@
 News
 ----
 
+0.0.4
+~~~~~
+
+*Release date: 18-08-2020*
+
+- `#1 <https://github.com/bonitoo-io/ipython-flux/pull/1>`_: Fixed token argument starts with "-"
+
+
 0.0.3
 ~~~~~
 
