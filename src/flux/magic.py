@@ -117,7 +117,8 @@ class FluxMagic(Magics, Configurable):
             return flux.connection.Connection.connections
         elif args.close:
             return flux.connection.Connection._close(args.close)
-
+        if (args.token):
+            args.token = args.token.replace("\"", "")
         # save globals and locals so they can be referenced in bind vars
         user_ns = self.shell.user_ns.copy()
         user_ns.update(local_ns)
@@ -230,8 +231,6 @@ class FluxMagic(Magics, Configurable):
     def run_flux(conn: Connection, flux: str, config):
         if flux.strip():
             result = conn.session.query_api().query_data_frame(query=flux)
-            if result.empty and config.feedback:
-                print(result.rowcount)
 
             return result
         else:
