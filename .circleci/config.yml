@@ -19,7 +19,8 @@ jobs:
       - run:
           command: |
             # pytest would be a dep in requirements.txt
-            pytest
+            pip install pytest
+            pytest src/tests
           name: Test
 
 workflows:
