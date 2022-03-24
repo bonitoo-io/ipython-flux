@@ -1,14 +1,14 @@
-import time
 from datetime import datetime, timedelta
 
 import pytest
 from IPython.testing.globalipapp import get_ipython
 from influxdb_client import InfluxDBClient, Organization, Point
+from influxdb_client.client.write_api import SYNCHRONOUS
 from pandas import DataFrame
 
 ip = get_ipython()
 
-url = "http://localhost:9999"
+influx_url = "http://localhost:8086"
 token = "my-token"
 my_org = "my-org"
 test_bucket = "test_bucket_ipython"
@@ -18,48 +18,43 @@ test_bucket = "test_bucket_ipython"
 def setup(request):
     print("Load testing data")
 
-    client = InfluxDBClient(url=url, token=token, org=my_org, debug=False)
-    write_api = client.write_api()
-    buckets_api = client.buckets_api()
-    query_api = client.query_api()
+    with InfluxDBClient(url=influx_url, token=token, org=my_org, debug=False) as client:
+        with client.write_api(write_options=SYNCHRONOUS) as write_api:
+            buckets_api = client.buckets_api()
+            query_api = client.query_api()
+            bucket = buckets_api.find_bucket_by_name(bucket_name=test_bucket)
+            if bucket is not None:
+                buckets_api.delete_bucket(bucket=bucket)
 
-    org = find_my_org(client, my_org)
+            bucket = buckets_api.create_bucket(bucket_name=test_bucket, org=my_org)
 
-    bucket = buckets_api.find_bucket_by_name(bucket_name=test_bucket)
-    if bucket is not None:
-        buckets_api.delete_bucket(bucket=bucket)
+            num_records = 10
+            num_series = 10
 
-    bucket = buckets_api.create_bucket(bucket_name=test_bucket, org_id=org.id)
+            today = datetime.utcnow()
+            print("*** Write test series ***")
+            for loc in range(num_series):
+                for i in range(num_records):
+                    time_ = today - timedelta(hours=i + 1)
+                    point = Point(measurement_name="h2o_feet") \
+                        .time(time_) \
+                        .field("water_level", float(i)) \
+                        .tag("location", "location_" + str(loc)) \
+                        .tag("country", "country_" + str(loc))
+                    write_api.write(bucket=bucket.name,
+                                    record=point)
 
-    num_records = 10
-    num_series = 10
+        query = 'from(bucket:"{0}") |> range(start: 1970-01-01T00:00:00.000000001Z)'.format(test_bucket)
 
-    today = datetime.utcnow()
-    print("*** Write test series ***")
-    for loc in range(num_series):
-        for i in range(num_records):
-            time_ = today - timedelta(hours=i + 1)
-            point = Point(measurement_name="h2o_feet") \
-                .time(time_) \
-                .field("water_level", float(i)) \
-                .tag("location", "location_" + str(loc)) \
-                .tag("country", "country_" + str(loc))
-            write_api.write(bucket=bucket.name,
-                            record=point)
+        flux_result = query_api.query(query)
 
-    time.sleep(1)
+        assert len(flux_result) == num_series
+        records = flux_result[0].records
+        assert len(records) == num_records
 
-    query = 'from(bucket:"{0}") |> range(start: 1970-01-01T00:00:00.000000001Z)'.format(test_bucket)
-
-    flux_result = query_api.query(query)
-
-    assert len(flux_result) == num_series
-    records = flux_result[0].records
-    assert len(records) == num_records
-
-    ip.run_line_magic("load_ext", "flux")
-    ip.run_line_magic("flux", "http://localhost:9999 --token my-token --org my-org")
-    request.addfinalizer(cleanup)
+        ip.run_line_magic("load_ext", "flux")
+        ip.run_line_magic("flux", influx_url + " --token my-token --org my-org")
+        request.addfinalizer(cleanup)
 
 
 def cleanup():

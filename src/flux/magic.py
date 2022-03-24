@@ -28,7 +28,7 @@ except ImportError:
 class FluxMagic(Magics, Configurable):
     """Runs Flux statement on a InfluxDB
 
-    %%flux http://localhost:9999
+    %%flux http://localhost:8086
     from(bucket: "my-bucket") |> range(start: -1h)
 
     Provides the %%flux magic."""
@@ -103,12 +103,17 @@ class FluxMagic(Magics, Configurable):
         action="store_true",
         help="enable verbose mode for InfluxDB client library",
     )
-
+    @argument(
+        "--timeout",
+        type=int,
+        default=10_000,
+        help="InfluxDB timeout",
+    )
     def execute(self, line="", cell="", local_ns={}):
         """Runs Flux statement against a database, specified by connect string.
 
         Examples::
-          %%flux http://localhost:9999
+          %%flux http://localhost:8086
         from(bucket: "my-bucket") |> range(start: -1h)
 
         """
@@ -117,7 +122,7 @@ class FluxMagic(Magics, Configurable):
             return flux.connection.Connection.connections
         elif args.close:
             return flux.connection.Connection._close(args.close)
-        if (args.token):
+        if args.token:
             args.token = args.token.replace("\"", "")
         # save globals and locals so they can be referenced in bind vars
         user_ns = self.shell.user_ns.copy()
@@ -138,6 +143,7 @@ class FluxMagic(Magics, Configurable):
                 org=args.org,
                 displaycon=self.displaycon,
                 debug=args.debug,
+                timeout=args.timeout
             )
         except Exception as e:
             print(e)

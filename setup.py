@@ -7,14 +7,20 @@ here = os.path.abspath(os.path.dirname(__file__))
 README = open(os.path.join(here, "README.rst"), encoding="utf-8").read()
 NEWS = open(os.path.join(here, "NEWS.rst"), encoding="utf-8").read()
 
-
-version = "0.0.4"
+version = "0.0.5"
 
 install_requires = [
     "ipython>=1.0",
     "influxdb-client",
     "six",
     "ipython-genutils>=0.1.0",
+    "traitlets>=5.1.1",
+    "pandas>=1.0.0"
+    "setuptools>=49.2.0"
+]
+
+tests_requires = [
+    "pytest",
 ]
 
 setup(
@@ -42,4 +48,5 @@ setup(
     include_package_data=True,
     zip_safe=False,
     install_requires=install_requires,
+    tests_require=tests_requires
 )

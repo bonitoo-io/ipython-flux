@@ -93,6 +93,9 @@ Options
 ``-o`` / ``--org``
     InfluxDB org
 
+``--timeout``
+    InfluxDB query timeout in milliseconds (default timeout is 10_000 ms)
+
 ``-f`` / ``--file <path>``
     Run Flux from file at this path
 

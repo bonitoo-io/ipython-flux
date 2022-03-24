@@ -1,6 +1,13 @@
 News
 ----
 
+0.0.5
+~~~~~
+*Release date: unreleased*
+
+- `#2 <https://github.com/bonitoo-io/ipython-flux/pull/1>`_ - Updated dependencies, changed default InfluxDB port from 9999 to 8086
+- `#2 <https://github.com/bonitoo-io/ipython-flux/pull/1>`_ - Updated dependencies, changed default InfluxDB port from 9999 to 8086
+
 0.0.4
 ~~~~~
 

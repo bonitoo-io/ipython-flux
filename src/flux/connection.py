@@ -24,14 +24,14 @@ class Connection(object):
     @classmethod
     def tell_format(cls):
         return """Connection info needed in format, 
-        example: %flux http://localhost:9999/ --token my-token --org my-org"""
+        example: %flux http://localhost:8086/ --token my-token --org my-org"""
 
-    def __init__(self, url=None, token=None, org=None, debug=False):
+    def __init__(self, url=None, token=None, org=None, debug=False, timeout=None):
 
         if not url:
             url = os.getenv('INFLUXDB_V2_URL')
         if url is None:
-            raise Exception("Environment variable $INFLUXDB_V2_URK not set, and no url given.")
+            raise Exception("Environment variable $INFLUXDB_V2_URL not set, and no url given.")
 
         if not token:
             token = os.getenv('INFLUXDB_V2_TOKEN')
@@ -44,14 +44,14 @@ class Connection(object):
             raise Exception("Environment variable $INFLUXDB_V2_ORG not set, and no org given.")
 
         self.name = "%s@%s" % (url or "", org)
-        self.session = InfluxDBClient(url=url, token=token, org=org, debug=debug)
+        self.session = InfluxDBClient(url=url, token=token, org=org, debug=debug, timeout=timeout)
 
-        self.session.health()
+        self.session.ping()
         self.connections[repr(url)] = self
         Connection.current = self
 
     @classmethod
-    def set(cls, conn, token, org, displaycon, debug):
+    def set(cls, conn, token, org, displaycon, debug, timeout):
         "Sets the current database connection"
         if conn:
             if isinstance(conn, Connection):
@@ -59,14 +59,14 @@ class Connection(object):
             else:
                 existing = rough_dict_get(cls.connections, conn)
 
-            cls.current = existing or Connection(conn, token, org)
+            cls.current = existing or Connection(conn, token, org, debug, timeout)
 
         else:
             if cls.connections:
                 if displaycon:
                     print(cls.connection_list())
             else:
-                cls.current = Connection(conn, token, org, debug)
+                cls.current = Connection(conn, token, org, debug, timeout)
 
         return cls.current
 
