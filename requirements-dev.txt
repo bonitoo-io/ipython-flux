@@ -1,8 +1,0 @@
-pandas
-pytest
-wheel
-twine
-readme-renderer
-black
-isort
-

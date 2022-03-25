@@ -1,6 +1,13 @@
 News
 ----
 
+0.0.5
+~~~~~
+*Release date: 25-03-2022*
+
+- `#2 <https://github.com/bonitoo-io/ipython-flux/issues/2>`_ - Add connection timeout
+- `#3 <https://github.com/bonitoo-io/ipython-flux/pull/3>`_ - Change default InfluxDB port from 9999 to 8086, update dependencies
+
 0.0.4
 ~~~~~
 

@@ -1,17 +1,12 @@
 version: 2.1
+
 jobs:
   build:
-    executor: python/default
     docker:
       - image: cimg/python:3.8
-      - image: quay.io/influxdb/influxdb:2.0.0-beta
+      - image: influxdb:latest
     steps:
       - checkout
-      - python/load-cache
-      - python/install-deps
-      - python/install-deps:
-          dependency-file: "requirements-dev.txt"
-      - python/save-cache
       - run:
           command: |
             pip install .
@@ -19,15 +14,14 @@ jobs:
       - run:
           command: |
             # InfluxDB onboarding
-            wget -S --spider --tries=20 --retry-connrefused --waitretry=5 http://localhost:9999/metrics
-            curl -i -X POST http://localhost:9999/api/v2/setup -H 'accept: application/json' -d '{"username": "my-user","password": "my-password","org": "my-org","bucket": "my-bucket","token": "my-token"}'
+            wget -S --spider --tries=20 --retry-connrefused --waitretry=5 http://localhost:8086/metrics
+            curl -i -X POST http://localhost:8086/api/v2/setup -H 'accept: application/json' -d '{"username": "my-user","password": "my-password","org": "my-org","bucket": "my-bucket","token": "my-token"}'
       - run:
           command: |
             # pytest would be a dep in requirements.txt
-            pytest
+            pip install pytest
+            pytest src/tests
           name: Test
-orbs:
-  python: circleci/python@0.3.2
 
 workflows:
   main:
