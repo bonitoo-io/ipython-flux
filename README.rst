@@ -43,33 +43,32 @@ After the first connection, connect info can be omitted::
 If no connect string is supplied, ``%flux`` will use environment variables ``INFLUXDB_V2_URL``,
 ``INFLUXDB_V2_ORG``, ``INFLUXDB_V2_TOKEN`` to create connection into InfluxDB.
 
-
-Assignment
-----------
-
 Ordinary IPython assignment works for single-line ``%flux`` queries:
 
 .. code-block:: python
 
-    In [12]: result = %flux from(bucket: "apm_metricset")  |> range(start: 0)
+    In [12]: result = %flux from(bucket: "my-bucket")  |> range(start: 0)
 
 The ``<<`` operator captures query results in a local variable, and
 can be used in multi-line ``%%flux``:
 
 .. code-block:: python
 
-    In [19]: %%flux works << %flux from(bucket: "apm_metricset")
-        ...: |> range(start: 0)
-        ...:
+    In [19]: %%flux my_dataset <<
+        ...: from(bucket: "my-bucket")
+        ...: |> range(start: -30m)
+        ...: |> filter(fn: (r) => r["_measurement"] == "cpu")
+        ...: |> filter(fn: (r) => r["_field"] == "usage_idle" or r["_field"] == "usage_system" or r["_field"] == "usage_user")
+        ...: |> filter(fn: (r) => r["cpu"] == "cpu-total")
+        ...: |> drop(columns: ["_start", "_stop", "_result", "_measurement", "table", "_result"])
+        ...: |> pivot(rowKey:["_time"], columnKey: ["_field"], valueColumn: "_value")
 
-Pandas
-------
 
-result is automatically converted into pandas dataframe
+The result of the Flux command is automatically converted into Pandas dataframe. It is often useful to use Flux
+functions ``fieldsAsCol()`` or ``pivot()`` to convert data containing multiple timeseries into one dataset.
 
-.. code-block:: python
-
-    In [3]: result =  %flux from(bucket: "apm_metricset")  |> range(start: 0)
+Persist dataframe
+-----------------
 
 The ``--persist`` argument, with the name of a DataFrame object in memory will create a measurement
 in the database from the named DataFrame.  
