@@ -1,6 +1,12 @@
 News
 ----
 
+0.0.6
+~~~~~
+*Release date: 06-11-2022*
+
+- `#5 <https://github.com/bonitoo-io/ipython-flux/pull/5>`_ - Fix `setup.py` formatting
+
 0.0.5
 ~~~~~
 *Release date: 25-03-2022*
