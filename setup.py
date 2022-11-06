@@ -15,7 +15,7 @@ install_requires = [
     "six",
     "ipython-genutils>=0.1.0",
     "traitlets>=5.1.1",
-    "pandas>=1.0.0"
+    "pandas>=1.0.0",
     "setuptools>=49.2.0"
 ]
 
